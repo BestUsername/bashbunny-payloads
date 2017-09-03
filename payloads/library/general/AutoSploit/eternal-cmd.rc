@@ -1,0 +1,6 @@
+use auxiliary/scanner/portscan/syn
+set INTERFACE usb0
+set PORTS 1-1024
+set RHOSTS 172.16.64.64
+set THREADS 50
+run

